@@ -1,0 +1,77 @@
+EXPERIMENT 1 - GUIDE
+====================
+
+PURPOSE
+-------
+Improve on the baseline reproduction of
+
+  Hosen et al., "Ovarian cancer detection and classification using attention-based
+  CNN and deep feature extraction techniques", Scientific Reports (2026),
+  DOI: 10.1038/s41598-026-67832-z
+
+and try to BEAT the paper's reported numbers:
+  Paper (proposed model) : ACC 99.09% | PRE 99.17% | AUC 0.9985
+  Baseline run (output/) : AttCNN ACC 98.66% | AUC 0.9930
+
+MODEL USED IN THIS EXPERIMENT
+-----------------------------
+Name            : EfficientNet-CBAM  (short: EFNet-CBAM)
+Role            : Deep feature extractor
+
+- Backbone      : EfficientNet-B0, pre-trained on ImageNet
+                  (torchvision.models.efficientnet_b0, IMAGENET1K_V1 weights)
+                  outputs a 1280-channel feature map at 224x224 input.
+- Improvement   : CBAM (Convolutional Block Attention Module) injected after the
+                  last bottleneck feature map.
+                  CBAM = Channel Attention (shared MLP on avg/max pool + sigmoid)
+                         * then * Spatial Attention (7x7 conv on channel avg/max
+                         concatenation + sigmoid)
+- Head          : Global Avg Pool -> Dropout -> Linear(1280, 2)
+- Interface     : forward(x) -> (logits, features_flat), extract_features(x)
+                  identical to AttResNet50 so the downstream SHAP + classifier
+                  pipeline from src/pipeline.py is reused unchanged.
+
+WHY THIS MODEL
+--------------
+- ~4x fewer FLOPs than ResNet50 -> fine-tunes well inside the ~1-2h GPU budget
+  while typically transferring better on small medical image sets.
+- Keeps the paper's "attention-based CNN" story (CBAM is attention) for the thesis.
+- Stronger attention + match-paper training set is expected to push accuracy
+  above 99.09%.
+
+DOWNSTREAM STAGE (unchanged from src pipeline)
+----------------------------------------------
+1. SHAP feature selection  -> top 500 of the 1280 deep features
+2. Classifiers             -> DT, RF, XGBoost, AdaBoost, AttCNN
+3. NEW: Soft-voting ensemble over RF + XGBoost + AdaBoost + AttCNN test
+   probabilities (the ensemble row in results)
+
+KEY DIFFERENCES VS BASELINE (output/)
+-------------------------------------
+1. Feature extractor : EfficientNet-B0 + CBAM   (was AttResNet50)
+2. Split             : 80/10/10 = 790/98/99 (train=790 matches the paper's
+                       reported 790 training images)
+3. Training          : ~40 epochs, batch 32, Adam + CosineAnnealingLR
+4. Evaluation        : adds soft-voting Ensemble classifier row
+
+HOW TO RUN
+----------
+  python experiments/experiment1/main.py                      # defaults
+  python experiments/experiment1/main.py --fe-epochs 60       # longer FE training
+  python experiments/experiment1/main.py --n-selected 700     # keep more features
+  # Quick CPU smoke test:
+  python experiments/experiment1/main.py --fe-epochs 1 --cls-epochs 1
+
+OUTPUTS (experiments/experiment1/output/)
+-----------------------------------------
+  effnet_cbam.pt            trained EfficientNet-CBAM weights
+  features.npz             extracted 1280-d features (train/val/test)
+  selected_features_idx.npy SHAP-selected feature indices
+  results.csv / results.json per-model metrics (test set) incl. Ensemble
+  comparison_report.txt    paper vs baseline vs this experiment
+
+SUCCESS CRITERIA
+----------------
+  ACC  > 99.09%
+  AUC  >= 0.9985
+  MCC  >= 0.98

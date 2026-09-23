@@ -1,0 +1,108 @@
+====================================================================================================
+OVARIAN CANCER CLASSIFICATION - DETAILED PAPER vs REPRODUCTION COMPARISON
+====================================================================================================
+
+Paper: Hosen et al., 'Ovarian cancer detection and classification using
+attention-based CNN and deep feature extraction techniques', Scientific
+Reports (2026), DOI: 10.1038/s41598-026-67832-z
+Dataset: STRAMPN - 987 histopathological images (481 OC / 506 Non-OC)
+
+--------------------------------------------------------------------
+1. MODELS AND THEIR FULL FORMS
+--------------------------------------------------------------------
+
+Short name   Role                           Full form
+----------   ----------------------------   ------------------------------------------------------------
+DT           Classifier                     Decision Tree
+RF           Classifier                     Random Forest
+XGBoost      Classifier                     eXtreme Gradient Boosting
+AdaBoost     Classifier                     Adaptive Boosting
+AttCNN       Classifier                     Attention-based Convolutional Neural Network
+AttResNet50  Feature extractor              Attention-augmented Residual Network-50 (feature extractor)
+
+--------------------------------------------------------------------
+2. HYPERPARAMETERS USED IN THIS REPRODUCTION (output_config.json)
+--------------------------------------------------------------------
+
+  Split                 : 70% / 15% / 15% (train/val/test)
+  Image size            : 224
+  Preprocessing filter  : bilateral
+  Data augmentation     : True
+  Feature extractor     : attresnet50 (epochs=30, batch=16, lr=0.001)
+  Features extracted    : 2048
+  Feature selection     : shap (top 500 features)
+  Classifier epochs     : 200 (batch=32, lr=0.001)
+
+  Note: the paper reports split sizes 790/169/169 (approx 80/17/17); this
+  reproduction uses the exact 70/15/15 ratio on 987 images = 690/148/149.
+
+--------------------------------------------------------------------
+3. METRIC LEGEND
+--------------------------------------------------------------------
+
+  ACC  = Accuracy
+  SN   = Sensitivity / Recall
+  SP   = Specificity
+  PRE  = Precision
+  F1   = F1-score
+  MCC  = Matthews Correlation Coefficient
+  AUC  = Area under ROC curve
+
+--------------------------------------------------------------------
+4. PER-MODEL COMPARISON  [Paper proposed (AttCNN) vs Reproduction]
+--------------------------------------------------------------------
+
+Metric     Paper model  Repro AttCNN    Repro best  Delta (Repro-Proposed)
+--------------------------------------------------------------------------
+ACC             99.09%        98.66%        98.66%                -0.43 pp
+SN              98.96%        97.37%        97.37%                -1.59 pp
+SP              99.21%       100.00%       100.00%                +0.79 pp
+PRE             99.17%       100.00%       100.00%                +0.83 pp
+F1              99.06%        98.67%        98.67%                -0.39 pp
+MCC             98.18%        97.35%        97.35%                -0.83 pp
+AUC             99.85%        99.30%        99.89%                -0.55 pp
+
+  Note: 'Repro best' is the best value across DT/RF/XGBoost/AdaBoost/AttCNN
+  in this reproduction run.
+
+--------------------------------------------------------------------
+5. REPRODUCTION RESULTS - ALL CLASSIFIERS (test set)
+--------------------------------------------------------------------
+
+Model           ACC       SN       SP      PRE       F1      MCC      AUC  time(s)
+----------------------------------------------------------------------------------------
+DT           94.63%   97.37%   91.78%   92.50%   94.87%   89.38%   94.57%     0.16
+RF           98.66%   97.37%  100.00%  100.00%   98.67%   97.35%   99.73%     0.51
+XGBoost      98.66%   97.37%  100.00%  100.00%   98.67%   97.35%   99.89%     1.62
+AdaBoost     98.66%   97.37%  100.00%  100.00%   98.67%   97.35%   99.86%     2.82
+AttCNN       98.66%   97.37%  100.00%  100.00%   98.67%   97.35%   99.30%     0.00
+
+--------------------------------------------------------------------
+6. DATA SPLIT USED (this reproduction)
+--------------------------------------------------------------------
+
+  Total images : 987 (481 Ovarian_Cancer / 506 Ovarian_Non_Cancer)
+  train        : 690 (70%)
+  val          : 148 (15%)
+  test         : 149 (15%)  - stratified holdout
+
+--------------------------------------------------------------------
+7. ANALYSIS / KEY OBSERVATIONS
+--------------------------------------------------------------------
+
+  1. The reproduction's AttCNN (ACC 98.66%) is within ~0.4pp of the paper's
+     proposed model (ACC 99.09%, AUC 0.9985, MCC 0.9818).
+  2. Accuracy ties at 98.66% for RF, XGBoost, AdaBoost and AttCNN; XGBoost has
+     the best AUC (0.9989) in this reproduction.
+  3. Specificity and precision reach 100% for all strong classifiers (no false
+     positives on the test set); sensitivity is 97.37% (one OC image missed).
+  4. DT is clearly the weakest classifier (ACC 94.63%, MCC 0.8938, AUC 0.9457).
+  5. Likely gaps vs. the paper: split ratio (70:15:15 vs. ~80:17:17), number of
+     training epochs (FE=30, CLS=200) and augmentation/filter settings.
+  6. AttCNN time(s)=0.0 in the CSV is a placeholder (see pipeline.py) and does
+     not reflect real training time.
+
+====================================================================================================
+Paper values decoded from the reference PDF tables and cross-checked with the
+publisher abstract (accuracy 99.09%, precision 99.17%).
+====================================================================================================

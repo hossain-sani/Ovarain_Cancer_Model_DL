@@ -1,0 +1,19 @@
+Comparison: Paper vs Reproduction (AttCNN)
+==========================================
+
+Paper: Hosen et al., "Ovarian cancer detection and classification using attention-based
+CNN and deep feature extraction techniques", Scientific Reports (2026),
+DOI: 10.1038/s41598-026-67832-z
+
+Model name: attention-based CNN (ResNet50 backbone + spatial attention feature
+extractor, attention-based classifier). In code: AttResNet50 + AttCNN.
+
+Metric | Paper     | Your run (AttCNN)
+-------|-----------|------------------
+ACC    | 99.09%    | 98.66%
+PRE    | 99.17%    | 100%
+Best AUC | ~0.9985 | 0.9930
+
+Differences likely come from the 70:15:15 split (690/148/149) vs. paper's reported
+790/169/169, fe-epochs=30 / cls-epochs=200 hyperparameters, and exact
+augmentation/filter settings - not from architecture.
